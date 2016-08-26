@@ -1,0 +1,28 @@
+<application>
+  <component name="PyTestFrameworkService">
+    <option name="SDK_TO_PYTEST">
+      <map>
+        <entry key="D:\Projects\Flaskr\venv\Scripts\python.exe" value="false" />
+        <entry key="D:\Projects\HomeAutomation\venv\Scripts\python.exe" value="false" />
+        <entry key="D:\PycharmProjects\HomeAutomation\venv\Scripts\python.exe" value="false" />
+        <entry key="H:\SourceCode_Reading\HomeAutomation\HomeAutomation\venv\Scripts\python.exe" value="false" />
+      </map>
+    </option>
+    <option name="SDK_TO_NOSETEST">
+      <map>
+        <entry key="D:\Projects\Flaskr\venv\Scripts\python.exe" value="false" />
+        <entry key="D:\Projects\HomeAutomation\venv\Scripts\python.exe" value="false" />
+        <entry key="D:\PycharmProjects\HomeAutomation\venv\Scripts\python.exe" value="false" />
+        <entry key="H:\SourceCode_Reading\HomeAutomation\HomeAutomation\venv\Scripts\python.exe" value="false" />
+      </map>
+    </option>
+    <option name="SDK_TO_ATTEST">
+      <map>
+        <entry key="D:\Projects\Flaskr\venv\Scripts\python.exe" value="false" />
+        <entry key="D:\Projects\HomeAutomation\venv\Scripts\python.exe" value="false" />
+        <entry key="D:\PycharmProjects\HomeAutomation\venv\Scripts\python.exe" value="false" />
+        <entry key="H:\SourceCode_Reading\HomeAutomation\HomeAutomation\venv\Scripts\python.exe" value="false" />
+      </map>
+    </option>
+  </component>
+</application>
