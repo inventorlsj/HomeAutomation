@@ -4,6 +4,8 @@
    </head>
 
    <body>
+      {% set state_string = {0:'꺼짐', 2:'켜짐'} %}
+      {% set commend_string = {2:'꺼라', 0:'켜라'} %}
       <p>니 방의 현재 상태는 이렇다. <a href="{{ url_for('state_log', page=0) }}">니 방의 예전 상태는 요기서.</a></p>
       <table >
          <tr >
@@ -20,7 +22,7 @@
          </tr>
          <tr>
             <th  align="left">에어컨</th>
-            <td> {% if air_state %}켜짐{% else %}꺼짐{% endif %} </td>
+            <td> {{ state_string[air_state] }} </td>
          </tr>
          <tr>
             <th  align="left">제어 방식</th>
@@ -33,7 +35,7 @@
       {% if error %}<font color="red"> {{ error }} </font><dr>{% endif %}
       <form action="{{ url_for('control') }}" method="post" >
       니도 에어콘을 작동 시킬 수 있다.
-      <b>에어컨</b> <button name="but" value="air"> {% if air_state %}꺼라{% else %}켜라{% endif %} </button><br>
+      <b>에어컨</b> {% if air_state > 0 %}<button name="but" value="air_off"> 꺼라 {% else %} <button name="but" value="air_on"> 켜라 {% endif %}</button><br>
       에어컨 작동 방식을 바꿀 수 있다.
       <b>제어 방식</b> <button name="but" value="mode">{% if control_mode %}수동{% else %}자동{% endif %}</button><br>
       꼭 <b>암호</b>를 입력해라.<input type="password" name="password"><br>
