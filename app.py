@@ -24,6 +24,7 @@ operate_state = 0
 develop_air_state = False
 air_onoff_period = 0  # -1: 꺼질 때, 1: 켜질 때, 0: 시작
 until_time  = datetime.timedelta(seconds=86000) # 24시간이 넘어가면 seconds가 0이된다.
+control_mode = True
 error = None
 
 app = Flask(__name__)
