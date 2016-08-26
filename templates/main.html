@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+   <head>
+      <title>{{ title }}</title>
+   </head>
+
+   <body>
+      <p>니 방의 현재 상태는 이렇다. <a href="{{ url_for('state_log', page=0) }}">니 방의 예전 상태는 요기서.</a></p>
+      <table >
+         <tr >
+            <th  align="left" width="100">확인 시간</th>
+            <td>{{ time }}</td>
+         </tr>
+         <tr>
+            <th  align="left">온도</th>
+            <td>{{ t }}℃</td>
+         </tr>
+         <tr>
+            <th  align="left">습도</th>
+            <td>{{ rh }}%</td>
+         </tr>
+         <tr>
+            <th  align="left">에어컨</th>
+            <td> {% if air_state %}켜짐{% else %}꺼짐{% endif %} </td>
+         </tr>
+         <tr>
+            <th  align="left">제어 방식</th>
+            <td>  {% if control_mode %}자동{% else %}수동{% endif %} </td>
+         </tr>
+      </table>
+
+      <hr>
+
+      {% if error %}<font color="red"> {{ error }} </font><dr>{% endif %}
+      <form action="{{ url_for('control') }}" method="post" >
+      니도 에어콘을 작동 시킬 수 있다.
+      <b>에어컨</b> <button name="but" value="air"> {% if air_state %}꺼라{% else %}켜라{% endif %} </button><br>
+      에어컨 작동 방식을 바꿀 수 있다.
+      <b>제어 방식</b> <button name="but" value="mode">{% if control_mode %}수동{% else %}자동{% endif %}</button><br>
+      꼭 <b>암호</b>를 입력해라.<input type="password" name="password"><br>
+      </form>
+
+      <p><a href="{{ url_for('seting') }}">에어컨 자동 동작 설정은 요기서.</a></p>
+   </body>
+</html>

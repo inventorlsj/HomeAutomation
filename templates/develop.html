@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Develop_Page</title>
+</head>
+<body>
+      <form action="{{ url_for('develop') }}" method="post" >
+      <b>에어컨</b> <button name="but" value="air"> {% if air_state %}꺼라{% else %}켜라{% endif %} </button><br>
+      </form>
+
+</body>
+</html>
