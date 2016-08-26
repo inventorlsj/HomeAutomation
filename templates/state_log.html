@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>니 방의 예전 상태</title>
+
+</head>
+<body>
+    니 방의 예전 상태는 이러했고, 에어컨은 저러했다. <a href="{{ url_for('room_state') }}">니 방의 현제 상태는 요기서.</a><br>
+    <!--<a href="{{ url_for('add_test') }}">측정 시험.</a><br>-->
+    {% set state = {0:'다시 끔', 1:'그냥 켜짐', 2:'꺼짐', 3:'막 꺼짐', 4:'시작', 5:'막 켜짐', 6:'켜짐', 7:'그냥 꺼짐', 8:'다시 켬'} %}
+
+    <table>
+        <tr>
+            <td width="50">{% if prepage %} <a href="{{ url_for('state_log', page=prepage) }}">이전</a> {% endif %}</td>
+            <td width="50">{% if nextpage %} <a href="{{ url_for('state_log', page=nextpage) }}">다음</a> {% endif %}</td>
+        </tr>
+    </table>
+
+    <table border="1">
+        <tr align="center"><th>언제?</th><td>온도, 습도</td><td>에어컨은?</td></tr>
+    {% for entry in entries %}
+        <tr align="center">
+            <th>{{ entry.check_datetime }}</th>
+            <td>{{ entry.temperature }}℃, {{ entry.humidity }}%</td>
+            <td>{{ state[entry.air_state] }}</td>
+        </tr>
+        {% else %}
+    <li><em>Unbelievable.  No entries here so far</em>
+    {% endfor %}
+
+    </table>
+</body>
+</html>
