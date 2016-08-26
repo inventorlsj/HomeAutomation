@@ -1,4 +1,3 @@
-# from sht_sensor import Sht
 from __future__ import with_statement
 from contextlib import closing
 import sqlite3
@@ -6,6 +5,8 @@ from flask import Flask, render_template, request, redirect, url_for, g
 import datetime
 import threading
 import time
+import RPi.GPIO as GPIO
+from pi_sht1x import SHT1x
 
 # configuration
 DATABASE = 'log.db'
@@ -16,20 +17,25 @@ temperature = None
 humidity = None
 thre_t = 25
 thre_rh = 50
-wait_time = 3 # 시
-run_time = 10 # 분
+set_wait_time = 3 # 시
+set_runTime_min = 10 # 분
+set_runTime_max = 30 # 분
 air_state = False  #  -1: 꺼짐, 1: 켜짐
 manual_control = 0  # None
 operate_state = 0
 develop_air_state = False
 air_onoff_period = 0  # -1: 꺼질 때, 1: 켜질 때, 0: 시작
-until_time  = datetime.timedelta(seconds=86000) # 24시간이 넘어가면 seconds가 0이된다.
+waiting_time = datetime.timedelta(seconds=0)
+running_time = datetime.timedelta(seconds=0)
 control_mode = True
 error = None
 
 app = Flask(__name__)
 app.config.from_object(__name__)
-# sht = Sht(11, 17)
+
+DATA_PIN = 17
+SCK_PIN = 11
+
 
 def connect_db():
    return sqlite3.connect(app.config['DATABASE'])
@@ -57,8 +63,6 @@ def teardown_request(exception):
 @app.route('/')
 def room_state():
    global temperature, humidity, air_state, control_mode, error
-   # t = sht.read_t()
-   # rh = sht.read_rh(t)
 
    now = datetime.datetime.now()
    timeString = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -76,14 +80,15 @@ def room_state():
 
 @app.route('/seting')
 def seting():
-   global  thre_t, thre_rh, wait_time, run_time, error
+   global  thre_t, thre_rh, set_wait_time, set_runTime_min, set_runTime_max, error
 
    templateData = {
       'error' : error,
       'thre_t': thre_t,
       'thre_rh': thre_rh,
-      'wait_time': wait_time,
-      'run_time': run_time
+      'set_wait_time': set_wait_time,
+      'set_runTime_min': set_runTime_min,
+      'set_runTime_max': set_runTime_max
       }
 
    error = None
@@ -92,7 +97,7 @@ def seting():
 
 @app.route('/control', methods=['POST'])
 def control():
-   global error, air_state, control_mode, manual_control, until_time
+   global error, air_state, control_mode, manual_control, waiting_time
    error = None
 
    if request.form['password'] != app.config['MYPASSWORD']:
@@ -107,22 +112,22 @@ def control():
          air_onoff_period = air_state
 
          if control_mode:
-            until_time  = datetime.timedelta(seconds=86000)
-         else:
-            until_time  = datetime.timedelta(seconds=0)
+            waiting_time = datetime.timedelta(seconds=set_wait_time * 60)
+         # else:
+         #    until_time  = datetime.timedelta(seconds=0)
 
          now = datetime.datetime.now()
          timeString = now.strftime("%Y-%m-%d %H:%M:%S")
          g.db.execute(
-            'insert into setting_log (datetime, temperature, humidity, wait_time, run_time, control_mode) values (?, ?, ?, ?, ?, ?)',
-            [timeString, thre_t, thre_rh, wait_time, run_time, control_mode])
+            'insert into setting_log (datetime, temperature, humidity, set_wait_time, set_runTime_min, set_runTime_max, control_mode) values (?, ?, ?, ?, ?, ?, ?)',
+            [timeString, thre_t, thre_rh, set_wait_time, set_runTime_min, set_runTime_max, control_mode])
          g.db.commit()
 
    return redirect(url_for('room_state'))
 
 @app.route('/set_change', methods=['POST'])
 def set_change():
-   global thre_t, thre_rh, wait_time, run_time, control_mode, error
+   global thre_t, thre_rh, set_wait_time, set_runTime_min, set_runTime_max, control_mode, error
 
    error = None
 
@@ -132,19 +137,20 @@ def set_change():
       else:
          thre_t = int(request.form['set_thre_t'])
          thre_rh = int(request.form['set_thre_rh'])
-         wait_time = int(request.form['set_wait_time'])
-         run_time = int(request.form['set_run_time'])
+         set_wait_time = int(request.form['set_wait_time'])
+         set_runTime_min = int(request.form['set_runTime_min'])
+         set_runTime_max = int(request.form['set_runTime_max'])
 
          now = datetime.datetime.now()
          timeString = now.strftime("%Y-%m-%d %H:%M:%S")
-         g.db.execute('insert into setting_log (datetime, temperature, humidity, wait_time, run_time, control_mode) values (?, ?, ?, ?, ?, ?)',
-                      [timeString, thre_t, thre_rh, wait_time, run_time,control_mode])
+         g.db.execute('insert into setting_log (datetime, temperature, humidity, set_wait_time, set_runTime_min, set_runTime_max, control_mode) values (?, ?, ?, ?, ?, ?, ?)',
+                      [timeString, thre_t, thre_rh, set_wait_time, set_runTime_min, set_runTime_max, control_mode])
          g.db.commit()
 
    return redirect(url_for('seting'))
 
 def set_read():
-   global thre_t, thre_rh, wait_time, run_time, control_mode, air_onoff_period, until_time
+   global thre_t, thre_rh, set_wait_time, set_runTime_min, set_runTime_max, control_mode, air_onoff_period, waiting_time
 
    db = connect_db()
    cur = db.execute('select * from setting_log order by id desc limit 1')
@@ -153,19 +159,28 @@ def set_read():
    if len(row) < 1 :
       now = datetime.datetime.now()
       timeString = now.strftime("%Y-%m-%d %H:%M:%S")
-      db.execute('insert into setting_log (datetime, temperature, humidity, wait_time, run_time, control_mode) values (?, ?, ?, ?, ?, ?)',
-         [timeString, thre_t, thre_rh, wait_time, run_time, control_mode])
+      db.execute('insert into setting_log (datetime, temperature, humidity, set_wait_time, set_runTime_min, set_runTime_max, control_mode) values (?, ?, ?, ?, ?, ?, ?)',
+         [timeString, thre_t, thre_rh, set_wait_time, set_runTime_min, set_runTime_max, control_mode])
       db.commit()
    else:
       thre_t = row[0][2]
       thre_rh = row[0][3]
-      wait_time = row[0][4]
-      run_time = row[0][5]
-      control_mode = row[0][6]
+      set_wait_time = row[0][4]
+      set_runTime_min = row[0][5]
+      set_runTime_max = row[0][6]
+      control_mode = row[0][7]
 
    if not control_mode:
       air_onoff_period = air_check()
-      until_time  = datetime.timedelta(seconds=0)
+   #    until_time  = datetime.timedelta(seconds=0)
+   # else:
+   #    [temperature, humidity] = sensor_sensing()
+   #    if (temperature >= thre_t or humidity >= thre_rh):
+   #       until_time = datetime.timedelta(seconds=set_wait_time*60)
+   #    else:
+   #       until_time = datetime.timedelta(seconds=set_runTime_min*60)
+
+   waiting_time = datetime.timedelta(seconds=set_wait_time * 60)
 
 
 @app.route('/add_test')
@@ -220,14 +235,22 @@ def air_commend_trans(control):
 # 반환값 (온도, 습도)
 def sensor_sensing():
    # 개발용 - 온습도 현제 시간으로
-   now = datetime.datetime.now()
-   return [20, now.second]
+   # now = datetime.datetime.now()
+   t = rh = None
+
+   with SHT1x(DATA_PIN, SCK_PIN, gpio_mode=GPIO.BCM) as sensor:
+      t = sensor.read_temperature()
+      rh = sensor.read_humidity(t)
+
+   return [t, rh]
 
 # 주기적으로 온습도를 측정하여 DB에 저장
 def event_loop(checkTime):
-   global temperature, humidity, thre_t, thre_rh, air_state, wait_time, run_time, control_mode, manual_control, air_onoff_period, until_time
+   global temperature, humidity, thre_t, thre_rh, air_state, set_wait_time, set_runTime_min, set_runTime_max, control_mode, manual_control, air_onoff_period
+   global waiting_time, running_time
 
    pre_now = datetime.datetime.now()
+   pre_now_db = pre_now
 
    # operate_state = {-5:'꺼라 함', -4:'다시 끔', -3:'그냥 꺼짐', -2:'꺼짐', -1:'막 꺼짐', 0:, 1:'막 켜짐', 2:'켜짐', 3:'그냥 켜짐', 4:'다시 켬', 5:'꺼라 함'}
    operate_state = -2
@@ -242,10 +265,10 @@ def event_loop(checkTime):
 
       if control_mode and abs(manual_control) == 0:
          #if control_mode:
-         if (temperature >= thre_t or humidity >= thre_rh) and 1 != air_onoff_period and until_time.seconds > wait_time*60:
+         if (temperature >= thre_t or humidity >= thre_rh) and waiting_time.seconds >= set_wait_time*60 and 1 != air_onoff_period:
             air_onoff_period = 1
             print("켜질 때", operate_state)
-         elif (temperature < thre_t and humidity < thre_rh) and -1 != air_onoff_period and until_time.seconds > run_time*60:
+         elif (running_time.seconds >= set_runTime_max*60 or (temperature < thre_t and humidity < thre_rh and set_runTime_min*60 <= running_time.seconds)) and -1 != air_onoff_period:
             air_onoff_period = -1
             print("꺼질 때", operate_state)
       elif abs(manual_control) > 0: # 수동 제어 처리
@@ -259,7 +282,7 @@ def event_loop(checkTime):
                operate_state = 1
             else:
                operate_state = -1
-            until_time = datetime.timedelta(seconds=0)
+            waiting_time = running_time = datetime.timedelta(seconds=0)
          elif 1 == abs(operate_state) or 4 == abs(operate_state):
             if air_state > 0:
                operate_state = 2
@@ -276,8 +299,6 @@ def event_loop(checkTime):
                   operate_state = 2
                else:
                   operate_state = -2
-         if control_mode:
-            until_time = (now - pre_now) + until_time
       else:
          # if control_mode:
          if operate_state == 2 :
@@ -290,6 +311,11 @@ def event_loop(checkTime):
                operate_state = -3
             elif air_onoff_period > 0:
                operate_state = -5
+
+      if air_state > 0:
+         running_time = (now - pre_now) + running_time
+      else:
+         waiting_time = (now - pre_now) + waiting_time
 
       if not control_mode and abs(operate_state) == 3:
          air_onoff_period = air_state
@@ -313,7 +339,8 @@ def event_loop(checkTime):
          pre_operate_state = operate_state
          db_commend = operate_state
          flag_db = True
-      elif now.second % checkTime == 0:
+      elif (pre_now_db - now).seconds > checkTime: #now.second % checkTime == 0:
+         pre_now_db = now
          db_commend = 2 * air_state
          flag_db = True
 
@@ -328,7 +355,7 @@ def event_loop(checkTime):
          db.commit()
          db.close()
 
-         print(temperature, humidity, "ut-", until_time, db_commend_string[db_commend] )
+         # print(temperature, humidity, 'wait-', waiting_time, 'run-', running_time, db_commend_string[db_commend] )
 
       time.sleep(1)
 
