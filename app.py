@@ -7,6 +7,7 @@ import threading
 import time
 import RPi.GPIO as GPIO
 from pi_sht1x import SHT1x
+import os
 
 # configuration
 DATABASE = 'log.db'
@@ -33,9 +34,11 @@ error = None
 app = Flask(__name__)
 app.config.from_object(__name__)
 
-DATA_PIN = 17
+DATA_PIN = 4
 SCK_PIN = 11
 
+# aircon 
+AIRCON_PIN = 24
 
 def connect_db():
    return sqlite3.connect(app.config['DATABASE'])
@@ -217,7 +220,10 @@ def ir_commend():
 
 # 반환 값: -1: 꺼짐, 1: 켜짐
 def air_check():
-   if develop_air_state:
+   GPIO.setmode(GPIO.BCM)
+   GPIO.setup(24, GPIO.IN)
+
+   if GPIO.input(AIRCON_PIN):
       return 1
    else :
       return -1
@@ -225,8 +231,10 @@ def air_check():
 def air_commend_trans(control):
    if air_check() != control:
       if control > 0:
+         os.system("irsend SEND_ONCE /home/pi/lircd.conf KEY_MENU")
          print('켜저라')
       else:
+         os.system("irsend SEND_ONCE /home/pi/lircd.conf KEY_MENU")
          print('꺼져라')
       return ir_commend()
    else:
