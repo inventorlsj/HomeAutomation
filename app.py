@@ -292,6 +292,7 @@ def event_loop(checkTime):
                operate_state = -1
             waiting_time = running_time = datetime.timedelta(seconds=0)
          elif 1 == abs(operate_state) or 4 == abs(operate_state):
+            print("== : ", operate_state)
             if air_state > 0:
                operate_state = 2
             else:
@@ -354,6 +355,8 @@ def event_loop(checkTime):
 
       timeString = now.strftime("%Y-%m-%d %H:%M:%S")
 
+      print("operate_state DB after: ", operate_state)
+
       [temperature, humidity] = sensor_sensing()
       if flag_db:
          db = connect_db()
@@ -364,6 +367,16 @@ def event_loop(checkTime):
          db.close()
 
          # print(temperature, humidity, 'wait-', waiting_time, 'run-', running_time, db_commend_string[db_commend] )
+
+
+      if 1 == abs(operate_state) or 4 == abs(operate_state):
+         print("== : ", operate_state)
+         if air_state > 0:
+            operate_state = 2
+         else:
+            operate_state = -2
+
+      print("operate_state DB before: ", operate_state)
 
       time.sleep(1)
 
