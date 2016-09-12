@@ -12,6 +12,9 @@ import os
 # configuration
 DATABASE = 'log.db'
 MYPASSWORD = '7061lsj'
+WAITING_TIME_UNIT = 3600
+LOGING_TIME_UNIT = 60
+
 
 # default value
 temperature = None
@@ -115,7 +118,7 @@ def control():
          air_onoff_period = air_state
 
          if control_mode:
-            waiting_time = datetime.timedelta(seconds=set_wait_time * 60)
+            waiting_time = datetime.timedelta(seconds=set_wait_time * WAITING_TIME_UNIT)
          # else:
          #    until_time  = datetime.timedelta(seconds=0)
 
@@ -183,7 +186,7 @@ def set_read():
    #    else:
    #       until_time = datetime.timedelta(seconds=set_runTime_min*60)
 
-   waiting_time = datetime.timedelta(seconds=set_wait_time * 60)
+   waiting_time = datetime.timedelta(seconds=set_wait_time * WAITING_TIME_UNIT)
 
 
 @app.route('/add_test')
@@ -273,7 +276,7 @@ def event_loop(checkTime):
 
       if control_mode and abs(manual_control) == 0:
          #if control_mode:
-         if (temperature >= thre_t or humidity >= thre_rh) and waiting_time.seconds >= set_wait_time*60 and 1 != air_onoff_period:
+         if (temperature >= thre_t or humidity >= thre_rh) and waiting_time.seconds >= set_wait_time*WAITING_TIME_UNIT and 1 != air_onoff_period:
             air_onoff_period = 1
             print("켜질 때", operate_state)
          elif (running_time.seconds >= set_runTime_max*60 or (temperature < thre_t and humidity < thre_rh and set_runTime_min*60 <= running_time.seconds)) and -1 != air_onoff_period:
@@ -291,12 +294,6 @@ def event_loop(checkTime):
             else:
                operate_state = -1
             waiting_time = running_time = datetime.timedelta(seconds=0)
-         elif 1 == abs(operate_state) or 4 == abs(operate_state):
-            print("== : ", operate_state)
-            if air_state > 0:
-               operate_state = 2
-            else:
-               operate_state = -2
          elif 3 == abs(operate_state):
             if control_mode:
                if air_state > 0:
@@ -348,14 +345,14 @@ def event_loop(checkTime):
          pre_operate_state = operate_state
          db_commend = operate_state
          flag_db = True
-      elif (pre_now_db - now).seconds > checkTime: #now.second % checkTime == 0:
+      elif (now - pre_now_db).seconds > checkTime * LOGING_TIME_UNIT :
+         print('db_insert', (now - pre_now_db).seconds)
          pre_now_db = now
          db_commend = 2 * air_state
          flag_db = True
 
       timeString = now.strftime("%Y-%m-%d %H:%M:%S")
 
-      print("operate_state DB after: ", operate_state)
 
       [temperature, humidity] = sensor_sensing()
       if flag_db:
@@ -369,14 +366,14 @@ def event_loop(checkTime):
          # print(temperature, humidity, 'wait-', waiting_time, 'run-', running_time, db_commend_string[db_commend] )
 
 
+      # 1과 2 상태는 현 주기에서 2로 바로 전환
       if 1 == abs(operate_state) or 4 == abs(operate_state):
-         print("== : ", operate_state)
          if air_state > 0:
             operate_state = 2
          else:
             operate_state = -2
 
-      print("operate_state DB before: ", operate_state)
+      #print("state: ", operate_state, waiting_time, running_time)
 
       time.sleep(1)
 
