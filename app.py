@@ -17,6 +17,7 @@ LOGING_TIME_UNIT = 60
 
 
 # default value
+loop_flag = True
 temperature = None
 humidity = None
 thre_t = 25
@@ -64,7 +65,7 @@ def before_request():
 
 @app.teardown_request
 def teardown_request(exception):
-    g.db.close()
+   g.db.close()
 
 @app.route('/')
 def room_state():
@@ -140,6 +141,8 @@ def set_change():
    if request.method == 'POST':
       if request.form['password'] != app.config['MYPASSWORD']:
          error = '암호가 틀리다.'
+      elif int(request.form['set_runTime_min']) > int(request.form['set_runTime_max']):
+         error = '최소 작동 시간(' + request.form['set_runTime_min'] + '분)이 최대 작동 시간(' + request.form['set_runTime_max'] + '분)보다 큽니다.'
       else:
          thre_t = int(request.form['set_thre_t'])
          thre_rh = int(request.form['set_thre_rh'])
@@ -258,7 +261,7 @@ def sensor_sensing():
 # 주기적으로 온습도를 측정하여 DB에 저장
 def event_loop(checkTime):
    global temperature, humidity, thre_t, thre_rh, air_state, set_wait_time, set_runTime_min, set_runTime_max, control_mode, manual_control, air_onoff_period
-   global waiting_time, running_time
+   global waiting_time, running_time, loop_flag
 
    pre_now = datetime.datetime.now()
    pre_now_db = pre_now
@@ -269,7 +272,7 @@ def event_loop(checkTime):
       operate_state = 2
    pre_operate_state = operate_state
 
-   while True:
+   while loop_flag:
       [temperature, humidity] = sensor_sensing()
       now = datetime.datetime.now()
       air_state = air_check()
@@ -277,9 +280,13 @@ def event_loop(checkTime):
       if control_mode and abs(manual_control) == 0:
          #if control_mode:
          if (temperature >= thre_t or humidity >= thre_rh) and waiting_time.seconds >= set_wait_time*WAITING_TIME_UNIT and 1 != air_onoff_period:
+            if 0 == air_onoff_period:
+               waiting_time = running_time = datetime.timedelta(seconds=0)
             air_onoff_period = 1
             print("켜질 때", operate_state)
          elif (running_time.seconds >= set_runTime_max*60 or (temperature < thre_t and humidity < thre_rh and set_runTime_min*60 <= running_time.seconds)) and -1 != air_onoff_period:
+            if 0 == air_onoff_period:
+               waiting_time = running_time = datetime.timedelta(seconds=0)
             air_onoff_period = -1
             print("꺼질 때", operate_state)
       elif abs(manual_control) > 0: # 수동 제어 처리
@@ -373,7 +380,7 @@ def event_loop(checkTime):
          else:
             operate_state = -2
 
-      #print("state: ", operate_state, waiting_time, running_time)
+      print("state: ", operate_state, waiting_time, running_time)
 
       time.sleep(1)
 
@@ -388,6 +395,7 @@ def develop():
          print('에어컨 상태 수동 제어', develop_air_state)
 
    return render_template('develop.html')
+
 
 if __name__ == "__main__":
    #app.run()
@@ -406,4 +414,6 @@ if __name__ == "__main__":
    t.start()
 
    app.run(host='0.0.0.0', port=8080, debug=False)
+
+   loop_flag = False
 
