@@ -353,7 +353,7 @@ def event_loop(checkTime):
          db_commend = operate_state
          flag_db = True
       elif (now - pre_now_db).seconds > checkTime * LOGING_TIME_UNIT :
-         print('db_insert', (now - pre_now_db).seconds)
+         #print('db_insert', (now - pre_now_db).seconds)
          pre_now_db = now
          db_commend = 2 * air_state
          flag_db = True
@@ -380,7 +380,7 @@ def event_loop(checkTime):
          else:
             operate_state = -2
 
-      print("state: ", operate_state, waiting_time, running_time)
+      #print("state: ", operate_state, waiting_time, running_time)
 
       time.sleep(1)
 
