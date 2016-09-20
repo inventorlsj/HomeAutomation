@@ -237,10 +237,10 @@ def air_check():
 def air_commend_trans(control):
    if air_check() != control:
       if control > 0:
-         os.system("irsend SEND_ONCE /home/pi/lircd.conf KEY_MENU")
+         os.system("irsend SEND_ONCE hauzen KEY_POWER KEY_POWER")
          print('켜저라')
       else:
-         os.system("irsend SEND_ONCE /home/pi/lircd.conf KEY_MENU")
+         os.system("irsend SEND_ONCE hauzen KEY_POWER KEY_POWER")
          print('꺼져라')
       return ir_commend()
    else:
@@ -279,12 +279,12 @@ def event_loop(checkTime):
 
       if control_mode and abs(manual_control) == 0:
          #if control_mode:
-         if (temperature >= thre_t or humidity >= thre_rh) and waiting_time.seconds >= set_wait_time*WAITING_TIME_UNIT and 1 != air_onoff_period:
+         if (temperature >= thre_t and humidity >= thre_rh) and waiting_time.seconds >= set_wait_time*WAITING_TIME_UNIT and 1 != air_onoff_period:
             if 0 == air_onoff_period:
                waiting_time = running_time = datetime.timedelta(seconds=0)
             air_onoff_period = 1
             print("켜질 때", operate_state)
-         elif (running_time.seconds >= set_runTime_max*60 or (temperature < thre_t and humidity < thre_rh and set_runTime_min*60 <= running_time.seconds)) and -1 != air_onoff_period:
+         elif (running_time.seconds >= set_runTime_max*60 or (temperature < thre_t or humidity < thre_rh and set_runTime_min*60 <= running_time.seconds)) and -1 != air_onoff_period:
             if 0 == air_onoff_period:
                waiting_time = running_time = datetime.timedelta(seconds=0)
             air_onoff_period = -1
@@ -413,7 +413,7 @@ if __name__ == "__main__":
    t = threading.Thread(target=event_loop, args=(5,))
    t.start()
 
-   app.run(host='0.0.0.0', port=8080, debug=False)
+   app.run(host='0.0.0.0', debug=False)
 
    loop_flag = False
 
