@@ -13,7 +13,7 @@ import os
 DATABASE = 'log.db'
 MYPASSWORD = '7061lsj'
 WAITING_TIME_UNIT = 3600
-LOGING_TIME_UNIT = 60
+#LOGING_TIME_UNIT = 60
 
 
 # default value
@@ -356,7 +356,7 @@ def event_loop(checkTime):
          pre_operate_state = operate_state
          db_commend = operate_state
          flag_db = True
-      elif (now - pre_now_db).seconds > checkTime * LOGING_TIME_UNIT :
+      elif (0 == now.minute % checkTime) and now.minute != pre_now_db.minute :
          #print('db_insert', (now - pre_now_db).seconds)
          pre_now_db = now
          db_commend = 2 * air_state
