@@ -78,7 +78,7 @@ def room_state():
       'time' : timeString,
       't': temperature,
       'rh': humidity,
-      'air_state': air_state + 1,
+      'air_state': air_check() + 1,
       'control_mode': control_mode,
       'error': error
       }
@@ -112,8 +112,10 @@ def control():
    else:
       if request.form['but'] == 'air_off' and air_state > 0:
          manual_control = -1
+         time.sleep(1)
       if request.form['but'] == 'air_on' and air_state < 0:
          manual_control = 1
+         time.sleep(1)
       if request.form['but'] == 'mode':
          control_mode =  not control_mode
          air_onoff_period = air_state
@@ -239,6 +241,8 @@ def air_commend_trans(control):
       if control > 0:
          os.system("irsend SEND_ONCE hauzen KEY_POWER KEY_POWER")
          print('켜저라')
+         time.sleep(1)
+         os.system("irsend SEND_ONCE hauzen KEY_SLOW KEY_SLOW")
       else:
          os.system("irsend SEND_ONCE hauzen KEY_POWER KEY_POWER")
          print('꺼져라')
@@ -382,7 +386,7 @@ def event_loop(checkTime):
 
       #print("state: ", operate_state, waiting_time, running_time)
 
-      time.sleep(1)
+      time.sleep(0.1)
 
 #개발용
 @app.route('/develop', methods=['POST', 'GET'])
@@ -413,7 +417,7 @@ if __name__ == "__main__":
    t = threading.Thread(target=event_loop, args=(5,))
    t.start()
 
-   app.run(host='0.0.0.0', debug=False)
+   app.run(host='0.0.0.0', port=80, debug=False)
 
    loop_flag = False
 
